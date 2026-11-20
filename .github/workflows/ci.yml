@@ -1,0 +1,36 @@
+name: Validate app and container
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+      - run: docker compose config --quiet
+      - run: docker build -t oh-my-graphy:ci .
+      - name: Smoke test internal HTTP server
+        run: |
+          docker run -d --name graphy-smoke oh-my-graphy:ci
+          for attempt in 1 2 3 4 5; do
+            if docker exec graphy-smoke wget -q -O /dev/null http://127.0.0.1:8080/healthz; then
+              docker exec graphy-smoke wget -q -O /dev/null http://127.0.0.1:8080/
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs graphy-smoke
+          exit 1
+      - name: Cleanup
+        if: always()
+        run: docker rm -f graphy-smoke || true

@@ -1,0 +1,14 @@
+node_modules
+node_modules/**
+dist
+.git
+.github
+.openai
+.sites-runtime
+.codex
+.env
+.env.*
+*.local
+*.tsbuildinfo
+tests
+README.md
